@@ -1,0 +1,20 @@
+* 2048
+
+* How to build
+
+** On windows
+
+Requires CMake
+
+
+*** To compile
+
+install sdl2 and sdl2-ttf with vcpkg and then in a terminal add
+
+#+begin_src
+$env:Path += ";C:\Users\ShadowMitia\Documents\GitHub\vcpkg\installed\x64-windows\bin"
+$env:Lib += ";C:\Users\ShadowMitia\Documents\GitHub\vcpkg\installed\x64-windows\lib"
+$env:Include += ";C:\Users\ShadowMitia\Documents\GitHub\vcpkg\installed\x64-windows\include"
+#+end_src
+
+and then build with "cargo build"
