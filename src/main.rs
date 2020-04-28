@@ -196,8 +196,8 @@ fn main() -> Result<(), String> {
 
     let font: Font = ttf_context.load_font(font_path, 256).unwrap();
 
-    let green_square = create_rectangle_texture(&texture_creator, width, height, green).unwrap();
-    let _red_square = create_rectangle_texture(&texture_creator, width, height, red).unwrap();
+    let green_square:Texture = create_rectangle_texture(&texture_creator, width, height, green).unwrap();
+    let _red_square:Texture = create_rectangle_texture(&texture_creator, width, height, red).unwrap();
 
     let mut i = 0;
 
@@ -260,14 +260,14 @@ fn main() -> Result<(), String> {
                     None,
                     Rect::new(50 + i * 100, 50 + j * 100, 64, 64),
                 )?;
-                // let surface = font
-                //     .render(grid[index(i as usize, j as usize, 4)].to_string().as_str())
-                //     .blended(Color::RGBA(255, 0, 0, 255))
-                //     .unwrap();
-                // let texture = texture_creator
-                //     .create_texture_from_surface(&surface)
-                //     .unwrap();
-                let texture = create_blended_text_texture(&font, &texture_creator, grid[index(i as usize, j as usize, 4)].to_string().as_str(), Color::RGBA(255, 0, 0, 255)).unwrap();
+
+                let texture = create_blended_text_texture(
+                    &font,
+                    &texture_creator,
+                    grid[index(i as usize, j as usize, 4)].to_string().as_str(),
+                    Color::RGBA(255, 0, 0, 255),
+                )
+                .unwrap();
                 canvas.copy(
                     &texture,
                     None,

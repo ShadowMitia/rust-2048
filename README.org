@@ -18,3 +18,13 @@ $env:Include += ";C:\Users\ShadowMitia\Documents\GitHub\vcpkg\installed\x64-wind
 #+end_src
 
 and then build with "cargo build"
+
+** On Linux
+
+Just install SDL2 from the package manager
+
+*** Fedora
+
+#+begin_src sh
+sudo dnf install SDL2 SDL2-devel SDL2_ttf-devel SDL2_ttf
+#+end_src
