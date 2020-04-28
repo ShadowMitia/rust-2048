@@ -68,6 +68,7 @@ fn move_grid(dir: MoveDirection, grid: &mut Vec<u32>) {
                     }
                 }
             }
+
         }
         MoveDirection::Right => {
             for i in 1..4 {
@@ -171,8 +172,11 @@ fn main() -> Result<(), String> {
     let video_subsystem = sdl_context.video().unwrap();
     let ttf_context = sdl2::ttf::init().unwrap();
 
+    let window_width = 800;
+    let window_height = 600;
+
     let window = video_subsystem
-        .window("2048", 800, 600)
+        .window("2048", window_width, window_height)
         .position_centered()
         .build()
         .unwrap();
@@ -187,8 +191,8 @@ fn main() -> Result<(), String> {
 
     let texture_creator: TextureCreator<_> = canvas.texture_creator();
 
-    let width = 64;
-    let height = 64;
+    let width = 128;
+    let height = 128;
     let green = Color::RGB(0, 255, 0);
     let red = Color::RGB(255, 0, 0);
 
@@ -253,15 +257,18 @@ fn main() -> Result<(), String> {
         canvas.set_draw_color(Color::RGB(i, 64, 255 - i));
         canvas.clear();
 
+        let center_x = window_width / 2 - 4 * width / 2;
+        let center_y = window_height / 2 - 4 * height / 2;
+
         for i in 0..4 {
             for j in 0..4 {
                 canvas.copy(
                     &green_square,
                     None,
-                    Rect::new(50 + i * 100, 50 + j * 100, 64, 64),
+                    Rect::new((center_x + i * width) as i32, (50 + j * height) as i32, width, height),
                 )?;
 
-                let texture = create_blended_text_texture(
+                let number_texture = create_blended_text_texture(
                     &font,
                     &texture_creator,
                     grid[index(i as usize, j as usize, 4)].to_string().as_str(),
@@ -269,9 +276,9 @@ fn main() -> Result<(), String> {
                 )
                 .unwrap();
                 canvas.copy(
-                    &texture,
+                    &number_texture,
                     None,
-                    Rect::new(50 + i * 100, 50 + j * 100, 64, 64),
+                    Rect::new((center_x + i * width) as i32, (center_y + j * height) as i32, width, height),
                 )?;
             }
         }
