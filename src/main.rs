@@ -68,7 +68,6 @@ fn move_grid(dir: MoveDirection, grid: &mut Vec<u32>) {
                     }
                 }
             }
-
         }
         MoveDirection::Right => {
             for i in 1..4 {
@@ -167,6 +166,32 @@ fn add_random_starter_number(rng: &mut ThreadRng, grid: &Vec<u32>) -> Vec<u32> {
     }
 }
 
+fn hex_string_to_color(color_string: &str) -> Color {
+    Color::RGB(
+        u8::from_str_radix(&color_string[0..2], 16).unwrap(),
+        u8::from_str_radix(&color_string[2..4], 16).unwrap(),
+        u8::from_str_radix(&color_string[4..6], 16).unwrap(),
+    )
+}
+
+fn power2_to_index(power2: usize) -> usize {
+    match power2 {
+        0 => 0,
+        2 => 1,
+        4 => 2,
+        8 => 3,
+        16 => 4,
+        32 => 5,
+        64 => 6,
+        128 => 7,
+        256 => 8,
+        512 => 9,
+        1024 => 10,
+        2048 => 11,
+        _ => 1,
+    }
+}
+
 fn main() -> Result<(), String> {
     let sdl_context = sdl2::init().unwrap();
     let video_subsystem = sdl_context.video().unwrap();
@@ -193,17 +218,22 @@ fn main() -> Result<(), String> {
 
     let width = 128;
     let height = 128;
-    let green = Color::RGB(0, 255, 0);
-    let red = Color::RGB(255, 0, 0);
+    let board_background = Color::RGBA(119, 110, 101, 255);
+
+    let black_text = hex_string_to_color("776e65");
+    let white_text = hex_string_to_color("f9f6f2");
+
+    let number_colors = [
+        "eee4da", "ede0c8", "f2b179", "f59563", "f67c5f", "f65e3b", "edcf72", "edcc61", "edc850",
+        "edc53f", "edc22e ",
+    ]
+    .iter()
+    .map(|color_string| hex_string_to_color(color_string))
+    .collect::<Vec<Color>>();
 
     let font_path: &Path = Path::new("assets/RobotoMono-Regular.ttf");
 
     let font: Font = ttf_context.load_font(font_path, 256).unwrap();
-
-    let green_square:Texture = create_rectangle_texture(&texture_creator, width, height, green).unwrap();
-    let _red_square:Texture = create_rectangle_texture(&texture_creator, width, height, red).unwrap();
-
-    let mut i = 0;
 
     let mut rng = thread_rng();
 
@@ -253,33 +283,70 @@ fn main() -> Result<(), String> {
             }
         }
 
-        i = (i + 1) % 255;
-        canvas.set_draw_color(Color::RGB(i, 64, 255 - i));
+        canvas.set_draw_color(Color::WHITE);
         canvas.clear();
 
-        let center_x = window_width / 2 - 4 * width / 2;
-        let center_y = window_height / 2 - 4 * height / 2;
+        let padding_x: i32 = 20;
+        let padding_y: i32 = 20;
+
+        let margin = 10;
+        let center_x:i32 = (window_width / 2 - 4 * width / 2 - (padding_x as u32)) as i32;
+        let center_y:i32 = (window_height / 2 - 4 * height / 2 - (padding_y as u32)) as i32;
+        let center_board_x = center_x - padding_x / 2;
+        let center_board_y = center_y - padding_y / 2;
+
+        let board = create_rectangle_texture(
+            &texture_creator,
+            (4 * (width as i32) + margin + padding_x) as u32,
+            (4 * (height as i32) + margin + padding_y) as u32,
+            board_background,
+        )
+        .unwrap();
+
+        canvas.copy(
+            &board,
+            None,
+            Rect::new(
+                center_board_x as i32,
+                center_board_y as i32,
+                4 * (width + (padding_x as u32)),
+                4 * (height + (padding_y as u32)),
+            ),
+        )?;
 
         for i in 0..4 {
             for j in 0..4 {
-                canvas.copy(
-                    &green_square,
-                    None,
-                    Rect::new((center_x + i * width) as i32, (50 + j * height) as i32, width, height),
-                )?;
+                let rect = Rect::new(
+                    center_x + i * ((width as i32) + padding_x),
+                    center_y + j * ((height as i32) + padding_y),
+                    width,
+                    height,
+                );
+
+                let power2 = grid[index(i as usize, j as usize, 4)];
+
+                let tex: Texture = create_rectangle_texture(
+                    &texture_creator,
+                    width - 10,
+                    height - 10,
+                    number_colors[power2_to_index(power2 as usize)],
+                )
+                .unwrap();
+
+                canvas.copy(&tex, None, rect)?;
+
+                if power2 == 0 {
+                    continue;
+                }
 
                 let number_texture = create_blended_text_texture(
                     &font,
                     &texture_creator,
-                    grid[index(i as usize, j as usize, 4)].to_string().as_str(),
-                    Color::RGBA(255, 0, 0, 255),
+                    power2.to_string().as_str(),
+                    if power2 < 8 { black_text } else { white_text },
                 )
                 .unwrap();
-                canvas.copy(
-                    &number_texture,
-                    None,
-                    Rect::new((center_x + i * width) as i32, (center_y + j * height) as i32, width, height),
-                )?;
+                canvas.copy(&number_texture, None, rect)?;
             }
         }
 
