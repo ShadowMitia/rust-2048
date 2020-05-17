@@ -41,18 +41,20 @@ enum MoveDirection {
     Left,
     Right,
     Up,
-    Down,
+    Down
 }
 
-fn move_grid(dir: MoveDirection, grid: &mut Vec<u32>) {
+fn move_grid(dir: MoveDirection, mut game_grid: &mut Grid) {
     let mut has_moved = false;
+
+    let grid = &mut game_grid.grid;
 
     let _res = match dir {
         MoveDirection::Left => {
             for i in 1..4 {
                 for j in 0..4 {
-                    let target_index = index(i - 1, j, 4);
-                    let value_index = index(i, j, 4);
+                    let target_index = index(i - 1, j, game_grid.width);
+                    let value_index = index(i, j, game_grid.width);
 
                     let target = grid[target_index];
                     let value = grid[value_index];
@@ -72,7 +74,7 @@ fn move_grid(dir: MoveDirection, grid: &mut Vec<u32>) {
         MoveDirection::Right => {
             for i in 1..4 {
                 for j in 0..4 {
-                    let target_index = index(3 - i + 1, j, 4);
+                    let target_index = index(3 - i + 1, j, game_grid.width);
                     let value_index = index(3 - i, j, 4);
 
                     let target = grid[target_index];
@@ -93,8 +95,8 @@ fn move_grid(dir: MoveDirection, grid: &mut Vec<u32>) {
         MoveDirection::Up => {
             for i in 0..4 {
                 for j in 1..4 {
-                    let target_index = index(i, j - 1, 4);
-                    let value_index = index(i, j, 4);
+                    let target_index = index(i, j - 1, game_grid.width);
+                    let value_index = index(i, j, game_grid.width);
 
                     let target = grid[target_index];
                     let value = grid[value_index];
@@ -114,8 +116,8 @@ fn move_grid(dir: MoveDirection, grid: &mut Vec<u32>) {
         MoveDirection::Down => {
             for i in 0..4 {
                 for j in 1..4 {
-                    let target_index = index(i, 3 - j + 1, 4);
-                    let value_index = index(i, 3 - j, 4);
+                    let target_index = index(i, 3 - j + 1, game_grid.width);
+                    let value_index = index(i, 3 - j, game_grid.width);
 
                     let target = grid[target_index];
                     let value = grid[value_index];
@@ -135,35 +137,13 @@ fn move_grid(dir: MoveDirection, grid: &mut Vec<u32>) {
     };
 
     if has_moved {
-        move_grid(dir, grid);
+        move_grid(dir, &mut game_grid);
     }
 }
 
-fn add_random_starter_number(rng: &mut ThreadRng, grid: &Vec<u32>) -> Vec<u32> {
-    let val = if rng.gen() { 2 } else { 4 };
 
-    let mut new_grid = grid.clone();
-
-    let length = grid.len();
-
-    let mut has_oppening = false;
-    for target in grid {
-        if *target == 0 {
-            has_oppening = true;
-        }
-    }
-
-    if !has_oppening {
-        return new_grid;
-    }
-
-    loop {
-        let index = rng.gen_range(0, length);
-        if new_grid[index] == 0 {
-            new_grid[index] = val;
-            return new_grid;
-        }
-    }
+fn generate_either_2_or_4(rng: &mut ThreadRng) -> u32 {
+    if rng.gen() { 2 } else { 4 }
 }
 
 fn hex_string_to_color(color_string: &str) -> Color {
@@ -192,6 +172,59 @@ fn power2_to_index(power2: usize) -> usize {
     }
 }
 
+
+struct Grid {
+    grid: Vec<u32>,
+    width: usize,
+    height: usize
+}
+
+impl Grid {
+
+    fn fill(&mut self, val: u32) {
+        self.grid = (0..(self.width * self.height)).map(|_| val).collect()
+    }
+
+    fn new(num_cell_width: usize, num_cell_height: usize) -> Self {
+        Grid { width: num_cell_width, height: num_cell_height, grid: (0..(num_cell_width * num_cell_height)).map(|_| 0).collect() }
+    }
+}
+
+fn add_to_empty_cell(rng: &mut ThreadRng, grid: &mut Grid, val: u32) -> bool {
+
+    let length = grid.grid.len();
+
+    let mut has_oppening = false;
+    for target in &grid.grid {
+        if *target == 0 {
+            has_oppening = true;
+        }
+    }
+
+    if !has_oppening {
+        return false;
+    }
+
+    loop {
+        let index = rng.gen_range(0, length);
+        if grid.grid[index] == 0 {
+            grid.grid[index] = val;
+            return true;
+        }
+    }
+}
+
+fn reset_grid(mut rng: &mut ThreadRng, mut grid: &mut Grid) {
+    grid.fill(0);
+
+    let val = generate_either_2_or_4(&mut rng);
+    let _ignore = add_to_empty_cell(&mut rng, &mut grid, val);
+    let val = generate_either_2_or_4(&mut rng);
+    let _ignore = add_to_empty_cell(&mut rng, &mut grid, val);
+    let val = generate_either_2_or_4(&mut rng);
+    let _ignore = add_to_empty_cell(&mut rng, &mut grid, val);
+}
+
 fn main() -> Result<(), String> {
     let sdl_context = sdl2::init().unwrap();
     let video_subsystem = sdl_context.video().unwrap();
@@ -199,6 +232,9 @@ fn main() -> Result<(), String> {
 
     let window_width = 800;
     let window_height = 600;
+
+    let grid_cell_width = 4;
+    let grid_cell_height = 4;
 
     let window = video_subsystem
         .window("2048", window_width, window_height)
@@ -226,10 +262,15 @@ fn main() -> Result<(), String> {
     let number_colors = [
         "eee4da", "ede0c8", "f2b179", "f59563", "f67c5f", "f65e3b", "edcf72", "edcc61", "edc850",
         "edc53f", "edc22e ",
-    ]
+    ]   
     .iter()
     .map(|color_string| hex_string_to_color(color_string))
     .collect::<Vec<Color>>();
+
+    let padding_x: i32 = 20;
+    let padding_y: i32 = 20;
+
+    let margin = 10;
 
     let font_path: &Path = Path::new("assets/RobotoMono-Regular.ttf");
 
@@ -237,11 +278,19 @@ fn main() -> Result<(), String> {
 
     let mut rng = thread_rng();
 
-    let mut grid: Vec<u32> = (0..4 * 4).map(|_| 0).collect();
+    let mut grid= Grid::new(grid_cell_width, grid_cell_height);
 
-    grid = add_random_starter_number(&mut rng, &mut grid);
+
+    reset_grid(&mut rng, &mut grid);
+
+    let mut game_running = true;
 
     'running: loop {
+
+        let mut moved = false;
+        let mut dir = None;
+
+        // INPUT
         for event in event_pump.poll_iter() {
             match event {
                 Event::Quit { .. }
@@ -255,50 +304,72 @@ fn main() -> Result<(), String> {
                     keycode: Some(Keycode::Left),
                     ..
                 } => {
+                    dir = Some(MoveDirection::Left);
                     move_grid(MoveDirection::Left, &mut grid);
-                    grid = add_random_starter_number(&mut rng, &mut grid);
+                    let val = generate_either_2_or_4(&mut rng);
+
+                    let res = add_to_empty_cell(&mut rng, &mut grid, val);
+
                 }
                 Event::KeyDown {
                     keycode: Some(Keycode::Right),
                     ..
                 } => {
                     move_grid(MoveDirection::Right, &mut grid);
-                    grid = add_random_starter_number(&mut rng, &mut grid);
+                    let val = generate_either_2_or_4(&mut rng);
+
+                    let res = add_to_empty_cell(&mut rng, &mut grid, val);
                 }
                 Event::KeyDown {
                     keycode: Some(Keycode::Up),
                     ..
                 } => {
                     move_grid(MoveDirection::Up, &mut grid);
-                    grid = add_random_starter_number(&mut rng, &mut grid);
+                    let val = generate_either_2_or_4(&mut rng);
+
+                    let res = add_to_empty_cell(&mut rng, &mut grid, val);
                 }
                 Event::KeyDown {
                     keycode: Some(Keycode::Down),
                     ..
                 } => {
                     move_grid(MoveDirection::Down, &mut grid);
-                    grid = add_random_starter_number(&mut rng, &mut grid);
+
                 }
                 _ => {}
             }
         }
 
+        // UPDATE
+        if moved {
+            match dir {
+                Some(movement) => {
+                    move_grid(movement, &mut grid);
+                    let val = generate_either_2_or_4(&mut rng);
+                    let res = add_to_empty_cell(&mut rng, &mut grid, val);
+                    if !res {
+                        println!("You lose!");
+                    }
+                },
+                None => ()
+            }
+        }
+
+
+        // RENDERING
         canvas.set_draw_color(Color::WHITE);
         canvas.clear();
 
-        let padding_x: i32 = 20;
-        let padding_y: i32 = 20;
 
-        let margin = 10;
-        let center_x:i32 = (window_width / 2 - 4 * width / 2 - (padding_x as u32)) as i32;
-        let center_y:i32 = (window_height / 2 - 4 * height / 2 - (padding_y as u32)) as i32;
+        let center_x:i32 = (window_width / 2 - grid_cell_width as u32 * width / 2 - (padding_x as u32)) as i32;
+        let center_y:i32 = (window_height / 2 - grid_cell_height as u32 * height / 2 - (padding_y as u32)) as i32;
         let center_board_x = center_x - padding_x / 2;
         let center_board_y = center_y - padding_y / 2;
 
         let board = create_rectangle_texture(
             &texture_creator,
-            (4 * (width as i32) + margin + padding_x) as u32,
-            (4 * (height as i32) + margin + padding_y) as u32,
+            (grid_cell_width as i32 * (width as i32) + margin + padding_x) as u32,
+            (grid_cell_height as i32 * (height as i32) + margin + padding_y) as u32,
             board_background,
         )
         .unwrap();
@@ -309,21 +380,21 @@ fn main() -> Result<(), String> {
             Rect::new(
                 center_board_x as i32,
                 center_board_y as i32,
-                4 * (width + (padding_x as u32)),
-                4 * (height + (padding_y as u32)),
+                grid_cell_height as u32 * (width + (padding_x as u32)),
+                grid_cell_height as u32 * (height + (padding_y as u32)),
             ),
         )?;
 
-        for i in 0..4 {
-            for j in 0..4 {
+        for i in 0..grid_cell_width {
+            for j in 0..grid_cell_height {
                 let rect = Rect::new(
-                    center_x + i * ((width as i32) + padding_x),
-                    center_y + j * ((height as i32) + padding_y),
+                    center_x + i as i32 * ((width as i32) + padding_x),
+                    center_y + j as i32 * ((height as i32) + padding_y),
                     width,
                     height,
                 );
 
-                let power2 = grid[index(i as usize, j as usize, 4)];
+                let power2 = grid.grid[index(i as usize, j as usize, grid.width)];
 
                 let tex: Texture = create_rectangle_texture(
                     &texture_creator,

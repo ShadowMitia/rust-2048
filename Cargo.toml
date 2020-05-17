@@ -11,4 +11,4 @@ version = "0.34.0"
 features = ["ttf"]
 
 [dependencies]
-rand = "0.5.0"
+rand = "0.7.3"
