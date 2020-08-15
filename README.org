@@ -28,3 +28,9 @@ Just install SDL2 from the package manager
 #+begin_src sh
 sudo dnf install SDL2 SDL2-devel SDL2_ttf-devel SDL2_ttf
 #+end_src
+
+*** Ubuntu 
+
+#+begin_src sh
+sudo apt install libsdl2-dev libsdl2-ttf-dev
+#+end_src
